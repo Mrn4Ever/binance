@@ -21,8 +21,8 @@ REFRESH             = 7
 
 
 #Folders And Files
-CHECKPOINT_FILE = "checkpoint.csv"
-BALANCE_FILE    = "balance.csv"
+CHECKPOINT_FILE = "output/checkpoint.csv"
+BALANCE_FILE    = "output/balance.csv"
 
 
 #Binance API End Points
