@@ -1,6 +1,7 @@
 # Custom
 config.py
-output/*.csv
+checkpoint.csv
+balance.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
