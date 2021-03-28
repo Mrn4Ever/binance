@@ -305,7 +305,7 @@ def OpenPosition(TDF, coin, base):
     if (allocation > free):
         TDF.loc[symbol,'COMMENT'] = "[Bad New] insufficient funds"
         return False
-        
+
     log (f"Open {symbol} Quantity {allocation}", 1)
     sResult = postOrder(symbol, "BUY", allocation)
     log (sResult,0)
@@ -325,8 +325,9 @@ def ClosePosition(coin, base):
     index        = config.DEFAULT_COIN.index(coin)
     step_size    = STEP_SIZE [index]
     free, locked = getQuantity (coin)
-    factor       = math.floor(free/step_size)
+    factor       = int(math.floor(free/step_size))
     rounded_free = factor * float(step_size)
+
     log (f"Close {symbol} Quantity {rounded_free} Precision {step_size}", 1)
     sResult = postOrder(symbol, "SELL", 0, rounded_free)
     log (sResult,0)
