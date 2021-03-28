@@ -307,7 +307,7 @@ def OpenPosition(TDF, coin, base):
         return False
 
     sResult = postOrder(symbol, "BUY", allocation)
-    log (sResult)
+    log (sResult,0)
     oResult = json.loads(sResult)
 
     if ('orderId' in oResult):
@@ -328,7 +328,7 @@ def ClosePosition(coin, base):
     rounded_free = factor * float(step_size)
 
     sResult = postOrder(symbol, "SELL", 0, rounded_free)
-    log (sResult)
+    log (sResult,0)
     oResult = json.loads(sResult)
     if ('orderId' in oResult):
         return True
