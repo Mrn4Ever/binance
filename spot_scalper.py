@@ -325,8 +325,7 @@ def ClosePosition(coin, base):
     index        = config.DEFAULT_COIN.index(coin)
     step_size    = STEP_SIZE [index]
     free, locked = getQuantity (coin)
-    factor       = int(math.floor(free/step_size))
-    rounded_free = factor * float(step_size)
+    rounded_free = round_down(free, step_size)
 
     log (f"Close {symbol} Quantity {rounded_free} Precision {step_size}", 1)
     sResult = postOrder(symbol, "SELL", 0, rounded_free)
@@ -375,7 +374,8 @@ def sendPost(url, data, bUseKey = False):
 
 
 def log (sValue, sLevel):
-    logging.debug(sValue)
+    if config.DEBUG:
+        logging.debug(sValue)
 
 
 
@@ -472,6 +472,15 @@ def postOrder(symbol,side ,price = 0, quantity= 0, type = "MARKET"):
     url = url.replace("[PARAMS]",sParams)
     return sendPost(url = url, data = sParams, bUseKey = True)
 
+
+def round_down(num, step_size):
+    digits = math.log10(step_size) if step_size != 0 else 0
+    if (digits < 0):
+        digits = digits * -1
+        factor = 10.0 ** digits
+        return math.floor(num * factor) / factor
+    else:
+        return math.floor(num)
 
 if __name__ == '__main__':
     main ()
