@@ -325,7 +325,7 @@ def ClosePosition(coin, base):
     index        = config.DEFAULT_COIN.index(coin)
     step_size    = STEP_SIZE [index]
     free, locked = getQuantity (coin)
-    rounded_free = round_down(free, step_size)
+    rounded_free = round_down(float(free), step_size)
 
     log (f"Close {symbol} Quantity {rounded_free} Precision {step_size}", 1)
     sResult = postOrder(symbol, "SELL", 0, rounded_free)
