@@ -12,9 +12,10 @@ from termcolor import colored
 import decimal as D
 from decimal import *
 import config
+import logging
 
 getcontext().prec = 8
-
+logging.basicConfig(format='Date-Time : %(asctime)s -  %(levelname)s : %(message)s', filename="debug.log", level=logging.DEBUG)
 
 
 #Trading Info
@@ -306,6 +307,7 @@ def OpenPosition(TDF, coin, base):
         return False
 
     sResult = postOrder(symbol, "BUY", allocation)
+    log (sResult)
     oResult = json.loads(sResult)
 
     if ('orderId' in oResult):
@@ -326,6 +328,7 @@ def ClosePosition(coin, base):
     rounded_free = factor * float(step_size)
 
     sResult = postOrder(symbol, "SELL", 0, rounded_free)
+    log (sResult)
     oResult = json.loads(sResult)
     if ('orderId' in oResult):
         return True
@@ -370,11 +373,7 @@ def sendPost(url, data, bUseKey = False):
 
 
 def log (sValue, sLevel):
-
-    if config.DEBUG:
-        if sLevel <= config.DEBUG_LEVEL:
-            print("[config.DEBUG][Level {}]".format(sLevel))
-            print (sValue)
+    logging.debug(sValue)
 
 
 
