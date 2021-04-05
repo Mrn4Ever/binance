@@ -38,38 +38,91 @@ STEP_SIZE    = [Decimal(0)]  * len(config.DEFAULT_COIN)
 
 
 def main ():
+    # clear and  write header
     printHeader()
+
+    # input Continue Or Relaunch
+    inputContinueAction ()
+
+    # read step size for each chosen pair
     getExchangeInfo()
-    BDF = initializeBlance()
-    TDF = initialize()
 
+    # initialize balance dataframe
+    BDF = initializeBlanceDataframe()
+
+    # initialize trading dataframe
+    TDF = initializeTradingDataframe()
+
+    # refresg pair quantities
     RefreshQuantities (TDF)
-    calculate(TDF, BDF)
 
-    s = sched.scheduler(time.time, time.sleep)
-    s.enter(config.REFRESH, 1, schedule, (s, TDF, BDF))
-    s.run()
+    # start trading bot
+    while (1 == 1):
+        calculate(TDF, BDF)
 
     return
 
-def initializeBlance():
+def inputContinueAction ():
+    # input Continue Or Relaunch
+    print("* Available Actions")
+    print(f"*  1 - CONTINUE TRADING FROM LAST CHEKOUT")
+    print(f"*  2 - RESET FROM ZERO SELL {config.DEFAULT_COIN} to {config.DEFAULT_BASE}")
+    print(f"*  3 - RESET WITHOUT SELLING")
+
+    sContinue = input ("Select Action Default (1) :")
+    if (sContinue == "" or sContinue == "1"):
+        print (" - [OK] - CONTINUE TRADING FROM LAST CHEKOUT")
+    elif (sContinue == "2"):
+        print (colored(f"[WARNING] - THE BOT WILL SELL {config.DEFAULT_COIN} to {config.DEFAULT_BASE}","red"))
+        for coin in config.DEFAULT_COIN:
+            symbol = coin + config.DEFAULT_BASE
+            free, locked = getQuantity (coin)
+            if (free > 0):
+                print (f"SELL {free} OF {symbol}")
+                inputConfirmSellingAction (symbol,coin)
+        if os.path.exists(config.CHECKPOINT_FILE):
+            os.remove(config.CHECKPOINT_FILE)
+    elif (sContinue == "3"):
+        if os.path.exists(config.CHECKPOINT_FILE):
+            os.remove(config.CHECKPOINT_FILE)
+    else:
+        inputContinueAction()
+
+def inputConfirmSellingAction (symbol,coin):
+    sConfirmSell = input ("Confirm Selling (Y/N) default (N):")
+    if (sConfirmSell== "" or sConfirmSell =="N"):
+        print (colored(f"[IGNORED]","yellow"))
+    elif sConfirmSell == "Y":
+        if (ClosePosition(coin, config.DEFAULT_BASE)):
+            print (colored(f"SELLING {coin} OK","green"))
+        else:
+            print (colored(f"SELLING {coin} NOK","red"))
+    else:
+        inputConfirmSellingAction (symbol,coin)
+
+
+def initializeBlanceDataframe():
     if os.path.isfile(config.BALANCE_FILE):
+        # if file exists return dataframe for file
         BDF = pd.read_csv(config.BALANCE_FILE, index_col = 0)
         return BDF
     else:
-
+        # if file doesn't exists initlize new dataframe
         data  = {'BALANCE':[getBalance()]}
         index = [pd.Timestamp.now().strftime("%m/%d/%Y, %H:%M:%S")]
         BDF = pd.DataFrame(data=data, index=index)
         return BDF
 
-def initialize():
-
+def initializeTradingDataframe():
     if os.path.isfile(config.CHECKPOINT_FILE):
+        # if file exists return dataframe for file
         TDF = pd.read_csv(config.CHECKPOINT_FILE, index_col = 0, dtype={'STATUS': int,'COUNT':int}, converters={'BID': D.Decimal,'ASK': D.Decimal,'TSELL': D.Decimal,'RSELL': D.Decimal,'RBUY': D.Decimal,'TBUY': D.Decimal,'ALLOCATION': D.Decimal,'FREE': D.Decimal,'LOCKED': D.Decimal,'PROFIT': D.Decimal})
+        TDF.loc[TDF['STATUS'] == 1, 'STATUS'] = 0
+        TDF.loc[TDF['STATUS'] == 3, 'STATUS'] = 2
         print (TDF)
         return TDF
     else:
+        # initialize allocation
         free, locked = getQuantity (config.DEFAULT_BASE)
         print (" -> Free   {}: {}".format(config.DEFAULT_BASE,free))
         print (" -> Locked {}: {}".format(config.DEFAULT_BASE,locked))
@@ -77,8 +130,8 @@ def initialize():
         if (generalAllocation == ""):
             generalAllocation = 0
         generalAllocation = Decimal(generalAllocation)
-
         ALLOCATION   = [generalAllocation/Decimal(len(config.DEFAULT_COIN))]  * len(config.DEFAULT_COIN)
+        # if file doesn't exists initlize new dataframe
         tradingData = {
                         'BID':BID,
                         'BID_MOVE':BID_MOVE,
@@ -96,7 +149,6 @@ def initialize():
                         'PROFIT':PROFIT,
                         'COUNT':COUNT
                       }
-
         index = []
         for coin in config.DEFAULT_COIN:
             symbol = coin + config.DEFAULT_BASE
@@ -105,7 +157,7 @@ def initialize():
         return TDF
 
 def calculate (TDF, BDF):
-    #config.REFRESH Prices
+    # get Ticker from Bianance
     sBookTicker = getBookTicker()
     oBookTicker = json.loads(sBookTicker)
     for ticker in oBookTicker:
@@ -234,12 +286,6 @@ def workflow (TDF, BDF):
                     RefreshQuantities (TDF)
 
 
-
-def schedule(s, TDF, BDF):
-    calculate (TDF, BDF)
-    s.enter(config.REFRESH, 1, schedule, (s, TDF, BDF,))
-
-
 def printHeader():
     os.system('cls' if os.name=='nt' else 'clear')
     print (colored(".oO(Binance Trading Bot)","yellow"))
@@ -303,8 +349,7 @@ def OpenPosition(TDF, coin, base):
     free, locked = getQuantity (base)
 
     if (allocation > free):
-        TDF.loc[symbol,'COMMENT'] = "[Bad New] insufficient funds"
-        return False
+        allocation = free
 
     log (f"Open {symbol} Quantity {allocation}", 1)
     sResult = postOrder(symbol, "BUY", allocation)
@@ -317,7 +362,6 @@ def OpenPosition(TDF, coin, base):
     else:
         log (sResult,0)
         return False
-
 
 
 def ClosePosition(coin, base):
@@ -336,7 +380,6 @@ def ClosePosition(coin, base):
     else:
         log (sResult,0)
         return False
-
 
 
 
