@@ -67,6 +67,7 @@ def inputContinueAction ():
     print(f"*  1 - CONTINUE TRADING FROM LAST CHEKOUT")
     print(f"*  2 - RESET FROM ZERO SELL {DEFAULT_COIN} to {config.DEFAULT_BASE}")
     print(f"*  3 - RESET WITHOUT SELLING")
+    print(f"*  4 - SHOW GAINERS")
 
     sContinue = input ("Select Action Default (1) :")
     if (sContinue == "" or sContinue == "1"):
@@ -86,6 +87,9 @@ def inputContinueAction ():
         automaticTradingPairs()
         if os.path.exists(config.CHECKPOINT_FILE):
             os.remove(config.CHECKPOINT_FILE)
+    elif (sContinue == "4"):
+        showGainers()
+        inputContinueAction()
     else:
         inputContinueAction()
 
@@ -101,6 +105,14 @@ def inputConfirmSellingAction (symbol,coin):
     else:
         inputConfirmSellingAction (symbol,coin)
 
+def showGainers():
+    oResult = get24Hr()
+    for oSymbol in oResult:
+        symbol = oSymbol["symbol"]
+        if (symbol.endswith(config.DEFAULT_BASE) and ("DOWN" not in symbol)):
+            priceChangePercent = Decimal(oSymbol["priceChangePercent"])
+            if (priceChangePercent > config.DEFAULT_PRICE_CHANGE_PERCENT):
+                print (f"{symbol} {priceChangePercent}%")
 
 def automaticTradingPairs():
     global DEFAULT_COIN, ALLOCATION, FREE, LOCKED, PROFIT, COUNT, BID, BID_MOVE, ASK, ASK_MOVE, RBUY, TBUY, RSELL, TSELL, STATUS, COMMENT, STEP_SIZE
@@ -110,7 +122,7 @@ def automaticTradingPairs():
             symbol = oSymbol["symbol"]
             if (symbol.endswith(config.DEFAULT_BASE) and ("DOWN" not in symbol)):
                 priceChangePercent = Decimal(oSymbol["priceChangePercent"])
-                if (priceChangePercent > 0):
+                if (priceChangePercent > config.DEFAULT_PRICE_CHANGE_PERCENT):
                     DEFAULT_COIN.append(symbol.replace(config.DEFAULT_BASE,""))
     else:
         DEFAULT_COIN.extend(config.DEFAULT_COIN)
@@ -290,7 +302,7 @@ def workflow (TDF, BDF):
                     BDF.loc[ pd.Timestamp.now().strftime("%m/%d/%Y, %H:%M:%S") , 'BALANCE'] = getBalance()
                     BDF.to_csv(config.BALANCE_FILE, index=True)
                 else:
-                    TDF.loc[symbol,'STATUS']        = 0    
+                    TDF.loc[symbol,'STATUS']        = 0
 
         elif (Status == 2):
             TDF.loc[symbol,'COMMENT'] = "Waiting Opportunity To Sell"
@@ -383,9 +395,15 @@ def getBalance ():
 
 def OpenPosition(TDF, coin, base):
     symbol = coin + base
+    #Check price change percent
+    oResult = getSingle24Hr(symbol)
+    priceChangePercent = Decimal(oResult["priceChangePercent"])
+    if (priceChangePercent < config.DEFAULT_PRICE_CHANGE_PERCENT):
+        return False
+
+    #Check free balance
     allocation   = TDF.loc[symbol,'ALLOCATION']
     free, locked = getQuantity (base)
-
     if (allocation > free):
         log (f"Open {symbol} Quantity {allocation} greater thant free balance {free}", 1)
         return False
@@ -501,6 +519,12 @@ def getExchangeInfo():
 
 def get24Hr():
     url = config.BASE_URL + config.EP_24HR
+    sResult = sendGET(url)
+    oResult = json.loads(sResult)
+    return oResult
+
+def getSingle24Hr(symbol):
+    url = config.BASE_URL + config.EP_24HR + f"?symbol={symbol}"
     sResult = sendGET(url)
     oResult = json.loads(sResult)
     return oResult

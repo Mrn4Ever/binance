@@ -7,12 +7,14 @@ API_SECRET      = ""
 DEFAULT_BASE    = 'USDT'
 #DEFAULT_COIN    = ['DENT','TRX','OM','CHZ','RVN','DOGE','BTT','ONT','VET','WIN','HOT','TROY','KEY','VITE']
 DEFAULT_COIN    = []
+DEFAULT_PRICE_CHANGE_PERCENT = 5
 
 #Trading Levels
-TBUY_PERCENT    = 3
-RBUY_PERCENT    = 2
-RSELL_PERCENT   = 2
-TSELL_PERCENT   = 3
+TBUY_PERCENT    = 9
+RBUY_PERCENT    = 7
+RSELL_PERCENT   = 6
+TSELL_PERCENT   = 9
+
 
 #Processing Params
 DEBUG               = True
