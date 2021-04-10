@@ -5,8 +5,8 @@ API_SECRET      = ""
 
 #Trading Scope
 DEFAULT_BASE    = 'USDT'
-DEFAULT_COIN    = ['DENT','TRX','OM','CHZ','RVN','DOGE','BTT','ONT','VET','WIN','HOT','TROY','KEY','VITE']
-
+#DEFAULT_COIN    = ['DENT','TRX','OM','CHZ','RVN','DOGE','BTT','ONT','VET','WIN','HOT','TROY','KEY','VITE']
+DEFAULT_COIN    = []
 
 #Trading Levels
 TBUY_PERCENT    = 3
@@ -17,7 +17,6 @@ TSELL_PERCENT   = 3
 #Processing Params
 DEBUG               = True
 DEBUG_LEVEL         = -1
-REFRESH             = 7
 
 
 #Folders And Files
@@ -29,6 +28,7 @@ BALANCE_FILE    = "balance.csv"
 EP_TIME_SERVER          = "/api/v3/time"
 EP_SYSTEM_STATUS        = "/wapi/v3/systemStatus.html"
 EP_EXCHANGE_INFO        = "/api/v3/exchangeInfo"
+EP_24HR                 = "/api/v3/ticker/24hr"
 EP_ACCOUNT_INFO         = "/api/v3/account"
 EP_ALL_COINS            = "/sapi/v1/capital/config/getall"
 EP_BOOK_TICKER          = "/api/v3/ticker/bookTicker"

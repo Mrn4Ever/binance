@@ -17,41 +17,40 @@ import logging
 getcontext().prec = 8
 logging.basicConfig(format='Date-Time : %(asctime)s -  %(levelname)s : %(message)s', filename="debug.log", level=logging.DEBUG)
 
-
+DEFAULT_COIN = []
 #Trading Info
-ALLOCATION   = [Decimal(0)]  * len(config.DEFAULT_COIN)
-FREE         = [Decimal(0)]  * len(config.DEFAULT_COIN)
-LOCKED       = [Decimal(0)]  * len(config.DEFAULT_COIN)
-PROFIT       = [Decimal(0)]  * len(config.DEFAULT_COIN)
-COUNT        = [0] * len(config.DEFAULT_COIN)
-BID          = [Decimal(0)]  * len(config.DEFAULT_COIN)
-BID_MOVE     = ["="]* len(config.DEFAULT_COIN)
-ASK          = [Decimal(0)]  * len(config.DEFAULT_COIN)
-ASK_MOVE     = ["="]* len(config.DEFAULT_COIN)
-RBUY         = [Decimal(0)]  * len(config.DEFAULT_COIN)
-TBUY         = [Decimal(0)]  * len(config.DEFAULT_COIN)
-RSELL        = [Decimal(0)]  * len(config.DEFAULT_COIN)
-TSELL        = [Decimal(0)]  * len(config.DEFAULT_COIN)
-STATUS       = [Decimal(0)]  * len(config.DEFAULT_COIN)
-COMMENT      = [""] * len(config.DEFAULT_COIN)
-STEP_SIZE    = [Decimal(0)]  * len(config.DEFAULT_COIN)
+ALLOCATION   = []
+FREE         = []
+LOCKED       = []
+PROFIT       = []
+COUNT        = []
+BID          = []
+BID_MOVE     = []
+ASK          = []
+ASK_MOVE     = []
+RBUY         = []
+TBUY         = []
+RSELL        = []
+TSELL        = []
+STATUS       = []
+COMMENT      = []
+STEP_SIZE    = []
 
 
 def main ():
     # clear and  write header
     printHeader()
-
     # input Continue Or Relaunch
     inputContinueAction ()
-
-    # read step size for each chosen pair
-    getExchangeInfo()
 
     # initialize balance dataframe
     BDF = initializeBlanceDataframe()
 
     # initialize trading dataframe
     TDF = initializeTradingDataframe()
+
+    # read step size for each chosen pair
+    getExchangeInfo()
 
     # refresg pair quantities
     RefreshQuantities (TDF)
@@ -66,15 +65,16 @@ def inputContinueAction ():
     # input Continue Or Relaunch
     print("* Available Actions")
     print(f"*  1 - CONTINUE TRADING FROM LAST CHEKOUT")
-    print(f"*  2 - RESET FROM ZERO SELL {config.DEFAULT_COIN} to {config.DEFAULT_BASE}")
+    print(f"*  2 - RESET FROM ZERO SELL {DEFAULT_COIN} to {config.DEFAULT_BASE}")
     print(f"*  3 - RESET WITHOUT SELLING")
 
     sContinue = input ("Select Action Default (1) :")
     if (sContinue == "" or sContinue == "1"):
         print (" - [OK] - CONTINUE TRADING FROM LAST CHEKOUT")
     elif (sContinue == "2"):
-        print (colored(f"[WARNING] - THE BOT WILL SELL {config.DEFAULT_COIN} to {config.DEFAULT_BASE}","red"))
-        for coin in config.DEFAULT_COIN:
+        print (colored(f"[WARNING] - THE BOT WILL SELL {DEFAULT_COIN} to {config.DEFAULT_BASE}","red"))
+        automaticTradingPairs()
+        for coin in DEFAULT_COIN:
             symbol = coin + config.DEFAULT_BASE
             free, locked = getQuantity (coin)
             if (free > 0):
@@ -83,6 +83,7 @@ def inputContinueAction ():
         if os.path.exists(config.CHECKPOINT_FILE):
             os.remove(config.CHECKPOINT_FILE)
     elif (sContinue == "3"):
+        automaticTradingPairs()
         if os.path.exists(config.CHECKPOINT_FILE):
             os.remove(config.CHECKPOINT_FILE)
     else:
@@ -101,6 +102,36 @@ def inputConfirmSellingAction (symbol,coin):
         inputConfirmSellingAction (symbol,coin)
 
 
+def automaticTradingPairs():
+    global DEFAULT_COIN, ALLOCATION, FREE, LOCKED, PROFIT, COUNT, BID, BID_MOVE, ASK, ASK_MOVE, RBUY, TBUY, RSELL, TSELL, STATUS, COMMENT, STEP_SIZE
+    if config.DEFAULT_COIN == []:
+        oResult = get24Hr()
+        for oSymbol in oResult:
+            symbol = oSymbol["symbol"]
+            if (symbol.endswith(config.DEFAULT_BASE) and ("DOWN" not in symbol)):
+                priceChangePercent = Decimal(oSymbol["priceChangePercent"])
+                if (priceChangePercent > 0):
+                    DEFAULT_COIN.append(symbol.replace(config.DEFAULT_BASE,""))
+    else:
+        DEFAULT_COIN.extend(config.DEFAULT_COIN)
+
+    ALLOCATION   = [Decimal(0)]  * len(DEFAULT_COIN)
+    FREE         = [Decimal(0)]  * len(DEFAULT_COIN)
+    LOCKED       = [Decimal(0)]  * len(DEFAULT_COIN)
+    PROFIT       = [Decimal(0)]  * len(DEFAULT_COIN)
+    COUNT        = [0] * len(DEFAULT_COIN)
+    BID          = [Decimal(0)]  * len(DEFAULT_COIN)
+    BID_MOVE     = ["="]* len(DEFAULT_COIN)
+    ASK          = [Decimal(0)]  * len(DEFAULT_COIN)
+    ASK_MOVE     = ["="]* len(DEFAULT_COIN)
+    RBUY         = [Decimal(0)]  * len(DEFAULT_COIN)
+    TBUY         = [Decimal(0)]  * len(DEFAULT_COIN)
+    RSELL        = [Decimal(0)]  * len(DEFAULT_COIN)
+    TSELL        = [Decimal(0)]  * len(DEFAULT_COIN)
+    STATUS       = [Decimal(0)]  * len(DEFAULT_COIN)
+    COMMENT      = [""] * len(DEFAULT_COIN)
+
+
 def initializeBlanceDataframe():
     if os.path.isfile(config.BALANCE_FILE):
         # if file exists return dataframe for file
@@ -115,10 +146,14 @@ def initializeBlanceDataframe():
 
 def initializeTradingDataframe():
     if os.path.isfile(config.CHECKPOINT_FILE):
+        global DEFAULT_COIN
         # if file exists return dataframe for file
         TDF = pd.read_csv(config.CHECKPOINT_FILE, index_col = 0, dtype={'STATUS': int,'COUNT':int}, converters={'BID': D.Decimal,'ASK': D.Decimal,'TSELL': D.Decimal,'RSELL': D.Decimal,'RBUY': D.Decimal,'TBUY': D.Decimal,'ALLOCATION': D.Decimal,'FREE': D.Decimal,'LOCKED': D.Decimal,'PROFIT': D.Decimal})
         TDF.loc[TDF['STATUS'] == 1, 'STATUS'] = 0
         TDF.loc[TDF['STATUS'] == 3, 'STATUS'] = 2
+        DEFAULT_COIN = TDF.index
+        DEFAULT_COIN = [c.replace(config.DEFAULT_BASE, '') for c in DEFAULT_COIN]
+        print (DEFAULT_COIN)
         print (TDF)
         return TDF
     else:
@@ -130,7 +165,8 @@ def initializeTradingDataframe():
         if (generalAllocation == ""):
             generalAllocation = 0
         generalAllocation = Decimal(generalAllocation)
-        ALLOCATION   = [generalAllocation/Decimal(len(config.DEFAULT_COIN))]  * len(config.DEFAULT_COIN)
+        #ALLOCATION   = [generalAllocation/Decimal(len(DEFAULT_COIN))]  * len(DEFAULT_COIN)
+        ALLOCATION   = [generalAllocation]  * len(DEFAULT_COIN)
         # if file doesn't exists initlize new dataframe
         tradingData = {
                         'BID':BID,
@@ -150,7 +186,7 @@ def initializeTradingDataframe():
                         'COUNT':COUNT
                       }
         index = []
-        for coin in config.DEFAULT_COIN:
+        for coin in DEFAULT_COIN:
             symbol = coin + config.DEFAULT_BASE
             index.append(symbol)
         TDF = pd.DataFrame(data=tradingData, index=index)
@@ -162,7 +198,7 @@ def calculate (TDF, BDF):
     oBookTicker = json.loads(sBookTicker)
     for ticker in oBookTicker:
         symbol   = ticker['symbol']
-        for coin in config.DEFAULT_COIN:
+        for coin in DEFAULT_COIN:
             if (symbol == coin + config.DEFAULT_BASE):
                 if (Decimal(ticker['bidPrice']) > TDF.loc[symbol,'BID']):
                     TDF.loc[symbol,'BID_MOVE'] = "+"
@@ -196,7 +232,7 @@ def calculate (TDF, BDF):
     tdf_string = TDF.copy()
     bdf_string = BDF.copy()
 
-    ADF = pd.DataFrame(data=[STEP_SIZE], index=["STEP SIZE"], columns=config.DEFAULT_COIN)
+    ADF = pd.DataFrame(data=[STEP_SIZE], index=["STEP SIZE"], columns=DEFAULT_COIN)
     print (colored("[Watched Assets]","green"))
     print (ADF)
 
@@ -213,7 +249,7 @@ def calculate (TDF, BDF):
 
 
 def workflow (TDF, BDF):
-    for coin in config.DEFAULT_COIN:
+    for coin in DEFAULT_COIN:
         symbol = coin + config.DEFAULT_BASE
         Status = TDF.loc[symbol,'STATUS']
 
@@ -253,6 +289,8 @@ def workflow (TDF, BDF):
                     RefreshQuantities(TDF)
                     BDF.loc[ pd.Timestamp.now().strftime("%m/%d/%Y, %H:%M:%S") , 'BALANCE'] = getBalance()
                     BDF.to_csv(config.BALANCE_FILE, index=True)
+                else:
+                    TDF.loc[symbol,'STATUS']        = 0    
 
         elif (Status == 2):
             TDF.loc[symbol,'COMMENT'] = "Waiting Opportunity To Sell"
@@ -309,7 +347,7 @@ def RefreshQuantities (TDF):
     oAllCoins = json.loads(sAllCoins)
     for oCoin in oAllCoins:
         coinCode    = oCoin['coin']
-        for coin in config.DEFAULT_COIN:
+        for coin in DEFAULT_COIN:
             symbol = coin + config.DEFAULT_BASE
             if (coinCode == coin):
                 coinFree    = Decimal(oCoin['free'])
@@ -349,7 +387,8 @@ def OpenPosition(TDF, coin, base):
     free, locked = getQuantity (base)
 
     if (allocation > free):
-        allocation = free
+        log (f"Open {symbol} Quantity {allocation} greater thant free balance {free}", 1)
+        return False
 
     log (f"Open {symbol} Quantity {allocation}", 1)
     sResult = postOrder(symbol, "BUY", allocation)
@@ -366,7 +405,7 @@ def OpenPosition(TDF, coin, base):
 
 def ClosePosition(coin, base):
     symbol        = coin + base
-    index        = config.DEFAULT_COIN.index(coin)
+    index        = DEFAULT_COIN.index(coin)
     step_size    = STEP_SIZE [index]
     free, locked = getQuantity (coin)
     rounded_free = round_down(float(free), step_size)
@@ -385,7 +424,6 @@ def ClosePosition(coin, base):
 
 
 def sendGET(url, bUseKey = False):
-
     if (bUseKey):
         header = {'X-MBX-APIKEY': config.API_KEY}
         r = requests.get(url, headers = header)
@@ -396,8 +434,6 @@ def sendGET(url, bUseKey = False):
         r = requests.get(url)
         log (str(r.status_code) + " | " + url, 2)
         return r.text
-
-
 
 
 
@@ -449,19 +485,25 @@ def getStatus():
 
 
 def getExchangeInfo():
+    global STEP_SIZE
+    STEP_SIZE    = [Decimal(0)]  * len(DEFAULT_COIN)
     url = config.BASE_URL + config.EP_EXCHANGE_INFO
     sResult = sendGET(url)
     oResult = json.loads(sResult)
     for oSymbol in oResult['symbols']:
-        for coin in config.DEFAULT_COIN:
+        for coin in DEFAULT_COIN:
             symbol = coin + config.DEFAULT_BASE
             if symbol == oSymbol['symbol']:
-                index  = config.DEFAULT_COIN.index(coin)
+                index  = DEFAULT_COIN.index(coin)
                 for oFilter in oSymbol['filters']:
                     if oFilter['filterType'] == "LOT_SIZE":
                          STEP_SIZE[index] = Decimal(oFilter['stepSize'])
 
-
+def get24Hr():
+    url = config.BASE_URL + config.EP_24HR
+    sResult = sendGET(url)
+    oResult = json.loads(sResult)
+    return oResult
 
 def getAllCoins():
 
