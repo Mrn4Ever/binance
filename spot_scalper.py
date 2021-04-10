@@ -165,8 +165,6 @@ def initializeTradingDataframe():
         TDF.loc[TDF['STATUS'] == 3, 'STATUS'] = 2
         DEFAULT_COIN = TDF.index
         DEFAULT_COIN = [c.replace(config.DEFAULT_BASE, '') for c in DEFAULT_COIN]
-        print (DEFAULT_COIN)
-        print (TDF)
         return TDF
     else:
         # initialize allocation
@@ -240,21 +238,6 @@ def calculate (TDF, BDF):
 
     #print Overview
     printHeader()
-
-    tdf_string = TDF.copy()
-    bdf_string = BDF.copy()
-
-    ADF = pd.DataFrame(data=[STEP_SIZE], index=["STEP SIZE"], columns=DEFAULT_COIN)
-    print (colored("[Watched Assets]","green"))
-    print (ADF)
-
-    print (colored("[Account INFO]","green"))
-    print (bdf_string.tail(1))
-
-
-    print (colored("[Trading Dashboard]","green"))
-    print (tdf_string)
-
 
     #Save Checkpoint
     TDF.to_csv(config.CHECKPOINT_FILE, index=True)
@@ -335,12 +318,10 @@ def workflow (TDF, BDF):
                     BDF.to_csv(config.BALANCE_FILE, index=True)
                     RefreshQuantities (TDF)
 
-
 def printHeader():
     os.system('cls' if os.name=='nt' else 'clear')
     print (colored(".oO(Binance Trading Bot)","yellow"))
     print (colored("-> Last Execution: " + pd.Timestamp.now().strftime("%m/%d/%Y, %H:%M:%S"),'red'))
-
 
 def getQuantity (coin):
     sAllCoins = getAllCoins()
